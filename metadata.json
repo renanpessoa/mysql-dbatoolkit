@@ -1,6 +1,6 @@
 {
     "name": "mysql-dbatoolkit",
-    "version": "0.0.1",
+    "version": "0.0.3",
     "author": "Madeline Everett",
     "license": "N/A",
     "summary": "Tools and scripts for MySQL DBA tasks",

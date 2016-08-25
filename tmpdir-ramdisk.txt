@@ -1,0 +1,17 @@
+How to create a RAMDISK based tmpdir for MySQL
+
+> create the following directories
+$ mkdir -p /mysql/tmpdir/ramdisk
+$ mkdir -p /mysql/tmpdir/standard
+$ chown -R mysql: /mysql/tmpdir
+$ chmod 0700 /mysql/tmpdir/ramdisk
+$ chmod 0700 /mysql/tmpdir/standard
+
+> in the /etc/mysql/my.cnf file we make the following changes
+max_heap_table_size = 256M #recommend same size as tmp_table_size
+bulk_insert_buffer_size = 256M #recommend same size as tmp_table_size
+tmp_table_size = 256M
+tmpdir = /mysql/tmpdir/ramdisk:/mysql/tmpdir/standard #tmp01 should be a RAMDISK, tmp02 fall back to regular disk
+
+> in /etc/fstab we ensure the tmpdir is a ramdisk with the correct permissions for mysql
+tmpfs /mysql/tmpdir/ramdisk tmpfs rw,gid=4095,uid=4095,size=1024M,nr_inodes=32k,mode=0700 0 0
