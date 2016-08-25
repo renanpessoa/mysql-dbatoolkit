@@ -1,0 +1,3 @@
+echo -n "Exporting dbatools schema... "
+mysqldump --routines --single-transaction --opt --host=localhost dbatools > dbatools.schema.`date +'%Y%m%d-%H%M%S'`.sql
+echo "COMPLETE"
