@@ -1,3 +1,6 @@
+## 0.0.4
+- updating procs to add some more!
+
 ## 0.0.3
 - added engine_repor() proc to dbatools schema
 - added scripts/task.extract-single-table-from-backup.sh

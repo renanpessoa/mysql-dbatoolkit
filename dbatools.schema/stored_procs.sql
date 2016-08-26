@@ -18,7 +18,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `TRIGGER_LIST_SCHEMA`(
 proc_label:BEGIN
 
 IF q_schema IS NULL OR q_schema = '' THEN
-  SELECT "ERROR: ARGV1 not set. Specify a schema via 'call TRIGGER_LIST_SCHEMA('foo');'";
+  SELECT "ERROR: ARGV1 not set. Specify a schema via 'call TRIGGER_LIST_SCHEMA('foo');'" AS error;
   LEAVE proc_label;
 
  ELSE
@@ -38,7 +38,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `TRIGGER_SEARCH`(
 proc_label:BEGIN
 
 IF q_trigger IS NULL OR q_trigger = '' THEN
-  SELECT "ERROR: ARGV1 not set. Specify a trigger via 'call TRIGGER_SEARCH('foo');'";
+  SELECT "ERROR: ARGV1 not set. Specify a trigger via 'call TRIGGER_SEARCH('foo');'" AS error;
   LEAVE proc_label;
 
  ELSE
@@ -69,7 +69,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `PROC_LIST_SCHEMA`(
 proc_label:BEGIN
 
 IF q_schema IS NULL OR q_schema = '' THEN
-  SELECT "ERROR: ARGV1 not set. Specify a schema via 'call PROC_LIST_SCHEMA('foo');'";
+  SELECT "ERROR: ARGV1 not set. Specify a schema via 'call PROC_LIST_SCHEMA('foo');'" AS error;
   LEAVE proc_label;
 
  ELSE
@@ -89,7 +89,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `PROC_SEARCH`(
 proc_label:BEGIN
 
 IF q_proc IS NULL OR q_proc = '' THEN
-  SELECT "ERROR: ARGV1 not set. Specify a trigger via 'call PROC_SEARCH('foo');'";
+  SELECT "ERROR: ARGV1 not set. Specify a trigger via 'call PROC_SEARCH('foo');'" AS error;
   LEAVE proc_label;
 
  ELSE
@@ -156,6 +156,53 @@ FROM (
   POW(1024, 3) gb
   FROM information_schema.tables
   WHERE table_type = 'BASE TABLE') a;
+
+END$$
+DELIMITER ;
+-- END
+
+-- PROCEDURE TO SEARCH PRIVS FOR A USER
+DROP PROCEDURE IF EXISTS `dbatools`.`AUTH_USER_SEARCH`;
+DELIMITER $$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `AUTH_USER_SEARCH`(
+  IN q_username CHAR(64))
+  COMMENT 'Lists permissions for a given username.'
+proc_label:BEGIN
+
+IF q_username IS NULL OR q_username = '' THEN
+  SELECT "ERROR: ARGV1 not set. Specify a username via mysql> call AUTH_USER_SEARCH('foo');" AS error;
+  LEAVE proc_label;
+
+ELSE
+  SELECT "SQL HERE SQL HERE SQL HERE" AS ToDo;
+END IF;
+
+END$$
+DELIMITER ;
+-- END
+
+-- PROCEDURE TO UPDATE A USER PASSWORD
+DROP PROCEDURE IF EXISTS `dbatools`.`AUTH_USER_PASS_UPDATE`;
+DELIMITER $$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `AUTH_USER_PASS_UPDATE`(
+  IN q_username CHAR(64),
+  IN q_passwd VARCHAR(64))
+  COMMENT 'Update password for a user ARGV1, with specified password as ARGV2.'
+proc_label:BEGIN
+
+IF q_username IS NULL OR q_username = '' THEN
+  SELECT "ERROR: ARGV1 not set. Syntax: AUTH_USER_PASS_UPDATE('username','newpass');" AS error;
+  LEAVE proc_label;
+END IF;
+
+IF q_passwd IS NULL OR q_passwd = '' THEN
+  SELECT "ERROR: ARGV2 not set. Syntax: AUTH_USER_PASS_UPDATE('username','newpass');" AS error;
+  LEAVE proc_label;
+END IF;
+
+UPDATE mysql.user SET Password=PASSWORD(q_passwd) WHERE User=q_username;
+SELECT CONCAT("Updated user [",q_username, "] to password [", q_passwd,"]") AS output;
+FLUSH PRIVILEGES;
 
 END$$
 DELIMITER ;
