@@ -2,7 +2,7 @@
 DROP PROCEDURE IF EXISTS `dbatools`.`TRIGGER_LIST_ALL`;
 DELIMITER $$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `TRIGGER_LIST_ALL`()
-  COMMENT 'Lists all triggers on the server.'
+  COMMENT 'Lists all triggers on the server. mysql> call TRIGGER_LIST_ALL()'
 proc_label:BEGIN
   SELECT TRIGGER_NAME, TRIGGER_SCHEMA, DEFINER FROM INFORMATION_SCHEMA.TRIGGERS ORDER BY TRIGGER_SCHEMA, TRIGGER_NAME;
 END$$
@@ -14,11 +14,11 @@ DROP PROCEDURE IF EXISTS `dbatools`.`TRIGGER_LIST_SCHEMA`;
 DELIMITER $$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `TRIGGER_LIST_SCHEMA`(
   IN q_schema CHAR(64))
-  COMMENT 'Lists all triggers in a schema.'
+  COMMENT 'Lists all triggers in a schema. mysql> call TRIGGER_LIST_SCHEMA("foo");'
 proc_label:BEGIN
 
 IF q_schema IS NULL OR q_schema = '' THEN
-  SELECT "ERROR: ARGV1 not set. Specify a schema via 'call TRIGGER_LIST_SCHEMA('foo');'" AS error;
+  SELECT "ERROR: ARGV1 not set. Specify a schema via 'call TRIGGER_LIST_SCHEMA('foo')'" AS error;
   LEAVE proc_label;
 
  ELSE
@@ -34,11 +34,11 @@ DROP PROCEDURE IF EXISTS `dbatools`.`TRIGGER_SEARCH`;
 DELIMITER $$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `TRIGGER_SEARCH`(
   IN q_trigger CHAR(64))
-  COMMENT 'Searches for a trigger by name.'
+  COMMENT 'Searches for a trigger by name. mysql> call TRIGGER_SEARCH("foo");'
 proc_label:BEGIN
 
 IF q_trigger IS NULL OR q_trigger = '' THEN
-  SELECT "ERROR: ARGV1 not set. Specify a trigger via 'call TRIGGER_SEARCH('foo');'" AS error;
+  SELECT "ERROR: ARGV1 not set. Specify a trigger via 'call TRIGGER_SEARCH('foo')'" AS error;
   LEAVE proc_label;
 
  ELSE
@@ -53,7 +53,7 @@ DELIMITER ;
 DROP PROCEDURE IF EXISTS `dbatools`.`PROC_LIST_ALL`;
 DELIMITER $$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `PROC_LIST_ALL`()
-  COMMENT 'Lists all PROCEDURES on the server.'
+  COMMENT 'Lists all PROCEDURES on the server. mysql> call PROC_LIST_ALL()'
 proc_label:BEGIN
   SELECT ROUTINE_NAME, ROUTINE_SCHEMA, DEFINER FROM INFORMATION_SCHEMA.ROUTINES ORDER BY ROUTINE_SCHEMA, ROUTINE_NAME;
 END$$
@@ -65,7 +65,7 @@ DROP PROCEDURE IF EXISTS `dbatools`.`PROC_LIST_SCHEMA`;
 DELIMITER $$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `PROC_LIST_SCHEMA`(
   IN q_schema CHAR(64))
-  COMMENT 'Lists all PROCEDURES in a schema.'
+  COMMENT 'Lists all PROCEDURES in a schema. mysql> call PROC_LIST_SCHEMA("foo")'
 proc_label:BEGIN
 
 IF q_schema IS NULL OR q_schema = '' THEN
@@ -85,7 +85,7 @@ DROP PROCEDURE IF EXISTS `dbatools`.`PROC_SEARCH`;
 DELIMITER $$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `PROC_SEARCH`(
   IN q_proc CHAR(64))
-  COMMENT 'Searches for a PROCEDURE by name.'
+  COMMENT 'Searches for a PROCEDURE by name. mysql> call PROC_SEARCH("foo")'
 proc_label:BEGIN
 
 IF q_proc IS NULL OR q_proc = '' THEN
@@ -104,7 +104,7 @@ DELIMITER ;
 DROP PROCEDURE IF EXISTS `dbatools`.`ENGINE_REPORT`;
 DELIMITER $$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `ENGINE_REPORT`()
-  COMMENT 'Generates a report for table engine usage (MyISAM, INNODB, MEMORY).'
+  COMMENT 'Generates engine usage repoprt (MyISAM, INNODB, MEMORY). mysql> call ENGINE_REPORT()'
 proc_label:BEGIN
 
 SELECT
@@ -166,7 +166,7 @@ DROP PROCEDURE IF EXISTS `dbatools`.`AUTH_USER_SEARCH`;
 DELIMITER $$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `AUTH_USER_SEARCH`(
   IN q_username CHAR(64))
-  COMMENT 'Lists permissions for a given username.'
+  COMMENT 'Lists permissions for a given username. mysql> call AUTH_USER_SEARCH("foo")'
 proc_label:BEGIN
 
 IF q_username IS NULL OR q_username = '' THEN
@@ -187,7 +187,7 @@ DELIMITER $$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `AUTH_USER_PASS_UPDATE`(
   IN q_username CHAR(64),
   IN q_passwd VARCHAR(64))
-  COMMENT 'Update password for a user ARGV1, with specified password as ARGV2.'
+  COMMENT 'Update password for a user ARGV1, with specified password as ARGV2. mysql> call AUTH_USER_PASS_UPDATE("user","newpass")'
 proc_label:BEGIN
 
 IF q_username IS NULL OR q_username = '' THEN
