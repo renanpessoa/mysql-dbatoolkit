@@ -2,6 +2,18 @@ DROP DATABASE IF EXISTS dbatools;
 CREATE DATABASE `dbatools` /*!40100 DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci */;
 USE dbatools;
 
+-- Create the revision table
+DROP TABLE IF EXISTS dbatools.revision;
+CREATE TABLE `dbatools`.`revision` (
+  `revision_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `revision_num` CHAR(8) NOT NULL,
+  `github_commit_hash` VARCHAR(255) NOT NULL,
+  `created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Timestamp of initial creation.',
+  `modified` timestamp NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT 'Timestamp of modification.',
+  PRIMARY KEY (revision_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+-- END
+
 -- PROCEDURE TO LIST ALL TRIGGERS ON THE SERVER --
 DROP PROCEDURE IF EXISTS `dbatools`.`TRIGGER_LIST_ALL`;
 DELIMITER $$
@@ -125,10 +137,10 @@ DELIMITER ;
 -- END
 
 -- PROCEDURE TO REPORT ON ENGINE USAGE --
-DROP PROCEDURE IF EXISTS `dbatools`.`ENGINE_REPORT`;
+DROP PROCEDURE IF EXISTS `dbatools`.`REPORT_ENGINE_STATS`;
 DELIMITER $$
-CREATE DEFINER=`root`@`localhost` PROCEDURE `ENGINE_REPORT`()
-  COMMENT 'Generates engine usage repoprt (MyISAM, INNODB, MEMORY). mysql> call ENGINE_REPORT()'
+CREATE DEFINER=`root`@`localhost` PROCEDURE `REPORT_ENGINE_STATS`()
+  COMMENT 'Generates engine usage repoprt (MyISAM, INNODB, MEMORY). mysql> call REPORT_ENGINE_STATS()'
 proc_label:BEGIN
 
 SELECT
@@ -198,7 +210,7 @@ IF q_username IS NULL OR q_username = '' THEN
   LEAVE proc_label;
 
 ELSE
-  SELECT "SQL HERE SQL HERE SQL HERE" AS ToDo;
+  SELECT * FROM mysql.user WHERE User LIKE CONCAT('%', q_username , '%') ORDER BY User,Host;
 END IF;
 
 END$$
@@ -228,6 +240,28 @@ UPDATE mysql.user SET Password=PASSWORD(q_passwd) WHERE User=q_username;
 SELECT CONCAT("Updated user [",q_username, "] to password [", q_passwd,"]") AS output;
 FLUSH PRIVILEGES;
 
+END$$
+DELIMITER ;
+-- END
+
+-- PROCEDURE TO REPORT TABLE SIZES. ORDERED BY SCHEMA, TOTAL SIZE, DESCENDING --
+DROP PROCEDURE IF EXISTS `dbatools`.`REPORT_TABLE_SIZES`;
+DELIMITER $$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `REPORT_TABLE_SIZES`()
+  COMMENT 'Lists all tables on the server. Ordered by schema, total_size. mysql> call REPORT_TABLE_SIZES()'
+proc_label:BEGIN
+SELECT
+   table_schema as `schema`,
+   table_name AS `table`,
+   round((data_length / POW(1024,2)), 2) `data_size_mb`,
+   round((data_length / POW(1024,3)), 2) `data_size_gb`,
+   round((index_length / POW(1024,2)), 2) `index_size_mb`,
+   round((index_length / POW(1024,3)), 2) `index_size_gb`,
+   round(((data_length + index_length) / POW(1024,2)), 2) `total_size_mb`,
+   round(((data_length + index_length) / POW(1024,3)), 2) `total_size_gb`
+FROM information_schema.TABLES
+WHERE table_schema NOT IN ('information_schema','mysql','performance_schema')
+ORDER BY table_schema, (data_length + index_length) DESC;
 END$$
 DELIMITER ;
 -- END

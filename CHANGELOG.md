@@ -1,3 +1,7 @@
+## 0.0.5
+- renaming engine report proc, adding table size report
+- adding revision table to the schema
+
 ## 0.0.4
 - updating procs to add some more!
 
