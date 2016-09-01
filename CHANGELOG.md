@@ -1,3 +1,6 @@
+## 0.0.6
+- adding QUERY_REPORT procedure: an improved version of "show processlist;"
+
 ## 0.0.5
 - renaming engine report proc, adding table size report
 - adding revision table to the schema

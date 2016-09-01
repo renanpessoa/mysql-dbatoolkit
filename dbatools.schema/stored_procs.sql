@@ -15,8 +15,12 @@ CREATE TABLE `dbatools`.`revision` (
 -- END
 
 -- INSERT REVISION HISTORY TO revision TABLE
-INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.5','0a44a7a',NOW(),NULL);
+INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.5','0a44a7a','2016-08-31 11:08:09',NULL);
+INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.6','','2016-09-01 16:08:09',NULL);
 -- END
+
+
+
 
 -- PROCEDURE TO LIST ALL TRIGGERS ON THE SERVER --
 DROP PROCEDURE IF EXISTS `dbatools`.`TRIGGER_LIST_ALL`;
@@ -258,14 +262,28 @@ SELECT
    table_schema as `schema`,
    table_name AS `table`,
    round((data_length / POW(1024,2)), 2) `data_size_mb`,
-   round((data_length / POW(1024,3)), 2) `data_size_gb`,
    round((index_length / POW(1024,2)), 2) `index_size_mb`,
-   round((index_length / POW(1024,3)), 2) `index_size_gb`,
-   round(((data_length + index_length) / POW(1024,2)), 2) `total_size_mb`,
-   round(((data_length + index_length) / POW(1024,3)), 2) `total_size_gb`
+   round(((data_length + index_length) / POW(1024,2)), 2) `total_size_mb`
 FROM information_schema.TABLES
 WHERE table_schema NOT IN ('information_schema','mysql','performance_schema')
 ORDER BY table_schema, (data_length + index_length) DESC;
+END$$
+DELIMITER ;
+-- END
+
+-- PROCEDURE TO REPORT QUERIES, LIKE PROCESS LIST BUT BETTER --
+DROP PROCEDURE IF EXISTS `dbatools`.`QUERY_REPORT`;
+DELIMITER $$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `QUERY_REPORT`()
+  COMMENT 'Improved version of "show processlist". mysql> call QUERY_REPORT()'
+proc_label:BEGIN
+
+SELECT id,state,command,time,left(replace(info,'\n','<lf>'),120) as Query
+FROM information_schema.processlist
+WHERE command <> 'Sleep'
+AND info NOT LIKE '%PROCESSLIST%'
+ORDER BY time DESC LIMIT 50;
+
 END$$
 DELIMITER ;
 -- END
