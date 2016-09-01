@@ -29,7 +29,7 @@ CREATE TABLE `revision` (
   `created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Timestamp of initial creation.',
   `modified` timestamp NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT 'Timestamp of modification.',
   PRIMARY KEY (`revision_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -38,7 +38,7 @@ CREATE TABLE `revision` (
 
 LOCK TABLES `revision` WRITE;
 /*!40000 ALTER TABLE `revision` DISABLE KEYS */;
-INSERT INTO `revision` VALUES (1,'0.0.5','0a44a7a','2016-08-31 18:08:09',NULL);
+INSERT INTO `revision` VALUES (1,'0.0.5','0a44a7a','2016-08-31 18:08:09',NULL),(2,'0.0.6','f6a38ea','2016-09-01 23:45:09',NULL);
 /*!40000 ALTER TABLE `revision` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -217,6 +217,32 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `QUERY_REPORT` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8 */ ;
+/*!50003 SET character_set_results = utf8 */ ;
+/*!50003 SET collation_connection  = utf8_unicode_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `QUERY_REPORT`()
+    COMMENT 'Improved version of "show processlist". mysql> call QUERY_REPORT()'
+proc_label:BEGIN
+
+SELECT id,state,command,time,left(replace(info,'\n','<lf>'),120) as Query
+FROM information_schema.processlist
+WHERE command <> 'Sleep'
+AND info NOT LIKE '%PROCESSLIST%'
+ORDER BY time DESC LIMIT 50;
+
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 /*!50003 DROP PROCEDURE IF EXISTS `REPORT_ENGINE_STATS` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
@@ -304,11 +330,8 @@ SELECT
    table_schema as `schema`,
    table_name AS `table`,
    round((data_length / POW(1024,2)), 2) `data_size_mb`,
-   round((data_length / POW(1024,3)), 2) `data_size_gb`,
    round((index_length / POW(1024,2)), 2) `index_size_mb`,
-   round((index_length / POW(1024,3)), 2) `index_size_gb`,
-   round(((data_length + index_length) / POW(1024,2)), 2) `total_size_mb`,
-   round(((data_length + index_length) / POW(1024,3)), 2) `total_size_gb`
+   round(((data_length + index_length) / POW(1024,2)), 2) `total_size_mb`
 FROM information_schema.TABLES
 WHERE table_schema NOT IN ('information_schema','mysql','performance_schema')
 ORDER BY table_schema, (data_length + index_length) DESC;
@@ -406,4 +429,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2016-08-31 11:09:01
+-- Dump completed on 2016-09-01 16:47:36

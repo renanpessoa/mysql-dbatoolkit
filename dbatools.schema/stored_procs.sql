@@ -16,7 +16,7 @@ CREATE TABLE `dbatools`.`revision` (
 
 -- INSERT REVISION HISTORY TO revision TABLE
 INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.5','0a44a7a','2016-08-31 11:08:09',NULL);
-INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.6','','2016-09-01 16:08:09',NULL);
+INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.6','f6a38ea','2016-09-01 16:45:09',NULL);
 -- END
 
 
