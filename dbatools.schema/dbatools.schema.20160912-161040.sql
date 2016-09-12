@@ -29,7 +29,7 @@ CREATE TABLE `revision` (
   `created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Timestamp of initial creation.',
   `modified` timestamp NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT 'Timestamp of modification.',
   PRIMARY KEY (`revision_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -38,7 +38,7 @@ CREATE TABLE `revision` (
 
 LOCK TABLES `revision` WRITE;
 /*!40000 ALTER TABLE `revision` DISABLE KEYS */;
-INSERT INTO `revision` VALUES (1,'0.0.5','0a44a7a','2016-08-31 18:08:09',NULL),(2,'0.0.6','f6a38ea','2016-09-01 23:45:09',NULL);
+INSERT INTO `revision` VALUES (1,'0.0.5','0a44a7a','2016-08-31 18:08:09',NULL),(2,'0.0.6','f6a38ea','2016-09-01 23:45:09',NULL),(3,'0.0.7','4dbe296','2016-09-12 23:10:00',NULL);
 /*!40000 ALTER TABLE `revision` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -430,4 +430,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2016-09-12 16:08:42
+-- Dump completed on 2016-09-12 16:10:40
