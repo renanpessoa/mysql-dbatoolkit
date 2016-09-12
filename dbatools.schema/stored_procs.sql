@@ -14,7 +14,7 @@ CREATE TABLE `dbatools`.`revision` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 -- END
 
--- INSERT REVISION HISTORY TO revision TABLE ----------------------------------------------------------------#
+-- INSERT REVISION HISTORY INTO revision TABLE ----------------------------------------------------------------#
 INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.5','0a44a7a','2016-08-31 11:08:09',NULL);
 INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.6','f6a38ea','2016-09-01 16:45:09',NULL);
 -- END ------------------------------------------------------------------------------------------------------#
@@ -260,7 +260,8 @@ SELECT
    table_name AS `table`,
    round((data_length / POW(1024,2)), 2) `data_size_mb`,
    round((index_length / POW(1024,2)), 2) `index_size_mb`,
-   round(((data_length + index_length) / POW(1024,2)), 2) `total_size_mb`
+   round(((data_length + index_length) / POW(1024,2)), 2) `total_size_mb`,
+   table_rows AS `rows`
 FROM information_schema.TABLES
 WHERE table_schema NOT IN ('information_schema','mysql','performance_schema')
 ORDER BY table_schema, (data_length + index_length) DESC;

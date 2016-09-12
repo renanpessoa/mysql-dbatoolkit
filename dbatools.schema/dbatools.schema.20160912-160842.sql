@@ -319,7 +319,7 @@ DELIMITER ;
 /*!50003 SET @saved_col_connection = @@collation_connection */ ;
 /*!50003 SET character_set_client  = utf8 */ ;
 /*!50003 SET character_set_results = utf8 */ ;
-/*!50003 SET collation_connection  = utf8_unicode_ci */ ;
+/*!50003 SET collation_connection  = utf8_general_ci */ ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
@@ -331,7 +331,8 @@ SELECT
    table_name AS `table`,
    round((data_length / POW(1024,2)), 2) `data_size_mb`,
    round((index_length / POW(1024,2)), 2) `index_size_mb`,
-   round(((data_length + index_length) / POW(1024,2)), 2) `total_size_mb`
+   round(((data_length + index_length) / POW(1024,2)), 2) `total_size_mb`,
+   table_rows AS `rows`
 FROM information_schema.TABLES
 WHERE table_schema NOT IN ('information_schema','mysql','performance_schema')
 ORDER BY table_schema, (data_length + index_length) DESC;
@@ -429,4 +430,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2016-09-01 16:47:36
+-- Dump completed on 2016-09-12 16:08:42

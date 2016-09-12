@@ -1,3 +1,6 @@
+## 0.0.7
+- added row count to REPORT_TABLE_SIZES()
+
 ## 0.0.6
 - adding QUERY_REPORT procedure: an improved version of "show processlist;"
 
