@@ -14,13 +14,10 @@ CREATE TABLE `dbatools`.`revision` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 -- END
 
--- INSERT REVISION HISTORY TO revision TABLE
+-- INSERT REVISION HISTORY TO revision TABLE ----------------------------------------------------------------#
 INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.5','0a44a7a','2016-08-31 11:08:09',NULL);
 INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.6','f6a38ea','2016-09-01 16:45:09',NULL);
--- END
-
-
-
+-- END ------------------------------------------------------------------------------------------------------#
 
 -- PROCEDURE TO LIST ALL TRIGGERS ON THE SERVER --
 DROP PROCEDURE IF EXISTS `dbatools`.`TRIGGER_LIST_ALL`;
