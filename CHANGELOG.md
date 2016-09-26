@@ -1,3 +1,6 @@
+## 0.0.8
+- adding help() and version() procedures.
+
 ## 0.0.7
 - added row count to REPORT_TABLE_SIZES()
 

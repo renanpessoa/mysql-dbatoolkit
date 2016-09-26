@@ -14,11 +14,42 @@ CREATE TABLE `dbatools`.`revision` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 -- END
 
--- INSERT REVISION HISTORY INTO revision TABLE ----------------------------------------------------------------#
+-- INSERT REVISION HISTORY INTO revision TABLE --------------------------------------------------------------#
 INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.5','0a44a7a','2016-08-31 11:08:09',NULL);
 INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.6','f6a38ea','2016-09-01 16:45:09',NULL);
 INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.7','4dbe296','2016-09-12 16:10:00',NULL);
+-- INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.8','','2016-09-26 16:00:00',NULL);
 -- END ------------------------------------------------------------------------------------------------------#
+
+-- PROCEDURE TO SHOW HELP FOR OUR PROCEDURES --
+DROP PROCEDURE IF EXISTS `dbatools`.`HELP`;
+DELIMITER $$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `HELP`()
+  COMMENT 'Show the help menu for dbatools schema. mysql> call HELP()'
+proc_label:BEGIN
+
+SELECT ROUTINE_NAME, ROUTINE_COMMENT
+  FROM INFORMATION_SCHEMA.ROUTINES
+  WHERE ROUTINE_SCHEMA = 'dbatools'
+  ORDER BY ROUTINE_NAME;
+
+END$$
+DELIMITER ;
+-- END
+
+-- PROCEDURE TO SHOW VERSION FOR OUR PROCEDURES --
+DROP PROCEDURE IF EXISTS `dbatools`.`VERSION`;
+DELIMITER $$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `VERSION`()
+  COMMENT 'Show the help menu for dbatools schema. mysql> call VERSION()'
+proc_label:BEGIN
+
+SELECT * FROM dbatools.revision
+  ORDER BY revision_id DESC LIMIT 1;
+
+END$$
+DELIMITER ;
+-- END
 
 -- PROCEDURE TO LIST ALL TRIGGERS ON THE SERVER --
 DROP PROCEDURE IF EXISTS `dbatools`.`TRIGGER_LIST_ALL`;
