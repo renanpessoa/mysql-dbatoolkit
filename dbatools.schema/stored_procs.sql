@@ -2,7 +2,7 @@ DROP DATABASE IF EXISTS dbatools;
 CREATE DATABASE `dbatools` /*!40100 DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci */;
 USE dbatools;
 
--- Create the revision table
+-- Create the revision table --
 DROP TABLE IF EXISTS dbatools.revision;
 CREATE TABLE `dbatools`.`revision` (
   `revision_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -19,7 +19,16 @@ INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.5','0a44a7a','2016-08-31 11:0
 INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.6','f6a38ea','2016-09-01 16:45:09',NULL);
 INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.7','4dbe296','2016-09-12 16:10:00',NULL);
 INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.8','efae195','2016-09-26 16:00:00',NULL);
+INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.9','efae195','2016-09-27 14:00:00',NULL);
 -- END ------------------------------------------------------------------------------------------------------#
+
+-- Create InnoDB Lock Monitoring table --
+--  Note: This logs a lot of extra lock information in the SHOW ENGINE INNODB STATUS output --
+CREATE TABLE `dbatools`.`innodb_lock_monitor` (
+  `innodb_lock_monitor_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  PRIMARY KEY (innodb_lock_monitor_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+-- END
 
 -- PROCEDURE TO SHOW HELP FOR OUR PROCEDURES --
 DROP PROCEDURE IF EXISTS `dbatools`.`HELP`;
@@ -103,10 +112,10 @@ DELIMITER ;
 -- END
 
 -- PROCEDURE TO LIST ALL PROCEDURE ON THE SERVER --
-DROP PROCEDURE IF EXISTS `dbatools`.`PROC_LIST_ALL`;
+DROP PROCEDURE IF EXISTS `dbatools`.`ROUTINE_LIST_ALL`;
 DELIMITER $$
-CREATE DEFINER=`root`@`localhost` PROCEDURE `PROC_LIST_ALL`()
-  COMMENT 'Lists all PROCEDURES on the server. mysql> call PROC_LIST_ALL()'
+CREATE DEFINER=`root`@`localhost` PROCEDURE `ROUTINE_LIST_ALL`()
+  COMMENT 'Lists all ROUTINES on the server. mysql> call ROUTINE_LIST_ALL()'
 proc_label:BEGIN
   SELECT ROUTINE_NAME, ROUTINE_SCHEMA, DEFINER FROM INFORMATION_SCHEMA.ROUTINES ORDER BY ROUTINE_SCHEMA, ROUTINE_NAME;
 END$$
@@ -114,15 +123,15 @@ DELIMITER ;
 -- END
 
 -- PROCEDURE TO LIST ALL PROCEDURES IN A SCHEMA --
-DROP PROCEDURE IF EXISTS `dbatools`.`PROC_LIST_SCHEMA`;
+DROP PROCEDURE IF EXISTS `dbatools`.`ROUTINE_LIST_SCHEMA`;
 DELIMITER $$
-CREATE DEFINER=`root`@`localhost` PROCEDURE `PROC_LIST_SCHEMA`(
+CREATE DEFINER=`root`@`localhost` PROCEDURE `ROUTINE_LIST_SCHEMA`(
   IN q_schema CHAR(64))
-  COMMENT 'Lists all PROCEDURES in a schema. mysql> call PROC_LIST_SCHEMA("foo")'
+  COMMENT 'Lists all ROUTINES in a schema. mysql> call ROUTINE_LIST_SCHEMA("foo")'
 proc_label:BEGIN
 
 IF q_schema IS NULL OR q_schema = '' THEN
-  SELECT "ERROR: ARGV1 not set. Specify a schema via 'call PROC_LIST_SCHEMA('foo');'" AS error;
+  SELECT "ERROR: ARGV1 not set. Specify a schema via 'call ROUTINE_LIST_SCHEMA('foo');'" AS error;
   LEAVE proc_label;
 
  ELSE
@@ -134,15 +143,15 @@ DELIMITER ;
 -- END
 
 -- PROCEDURE TO LIST ALL PROCEDURES OWNED BY A USER
-DROP PROCEDURE IF EXISTS `dbatools`.`PROC_SEARCH_DEFINER`;
+DROP PROCEDURE IF EXISTS `dbatools`.`ROUTINE_SEARCH_DEFINER`;
 DELIMITER $$
-CREATE DEFINER=`root`@`localhost` PROCEDURE `PROC_SEARCH_DEFINER`(
+CREATE DEFINER=`root`@`localhost` PROCEDURE `ROUTINE_SEARCH_DEFINER`(
   IN q_definer CHAR(64))
-  COMMENT 'Lists all PROCEDURES owned by a definer. mysql> call PROC_SEARCH_DEFINER("foo")'
+  COMMENT 'Lists all ROUTINES owned by a definer. mysql> call ROUTINE_SEARCH_DEFINER("foo")'
 proc_label:BEGIN
 
 IF q_definer IS NULL OR q_definer = '' THEN
-  SELECT "ERROR: ARGV1 not set. Specify a definer via 'call PROC_SEARCH_DEFINER('foo');'" AS error;
+  SELECT "ERROR: ARGV1 not set. Specify a definer via 'call ROUTINE_SEARCH_DEFINER('foo');'" AS error;
   LEAVE proc_label;
 
  ELSE
@@ -154,15 +163,15 @@ DELIMITER ;
 -- END
 
 -- PROCEDURE TO SEARCH ONE TRIGGER BY NAME --
-DROP PROCEDURE IF EXISTS `dbatools`.`PROC_SEARCH`;
+DROP PROCEDURE IF EXISTS `dbatools`.`ROUTINE_SEARCH`;
 DELIMITER $$
-CREATE DEFINER=`root`@`localhost` PROCEDURE `PROC_SEARCH`(
+CREATE DEFINER=`root`@`localhost` PROCEDURE `ROUTINE_SEARCH`(
   IN q_proc CHAR(64))
-  COMMENT 'Searches for a PROCEDURE by name. mysql> call PROC_SEARCH("foo")'
+  COMMENT 'Searches for a ROUTINE by name. mysql> call ROUTINE_SEARCH("foo")'
 proc_label:BEGIN
 
 IF q_proc IS NULL OR q_proc = '' THEN
-  SELECT "ERROR: ARGV1 not set. Specify a trigger via 'call PROC_SEARCH('foo');'" AS error;
+  SELECT "ERROR: ARGV1 not set. Specify a trigger via 'call ROUTINE_SEARCH('foo');'" AS error;
   LEAVE proc_label;
 
  ELSE
@@ -301,11 +310,11 @@ END$$
 DELIMITER ;
 -- END
 
--- PROCEDURE TO REPORT QUERIES, LIKE PROCESS LIST BUT BETTER --
-DROP PROCEDURE IF EXISTS `dbatools`.`QUERY_REPORT`;
+-- PROCEDURE TO REPORT SLOW QUERIES --
+DROP PROCEDURE IF EXISTS `dbatools`.`REPORT_SLOW_QUERIES`;
 DELIMITER $$
-CREATE DEFINER=`root`@`localhost` PROCEDURE `QUERY_REPORT`()
-  COMMENT 'Improved version of "show processlist". mysql> call QUERY_REPORT()'
+CREATE DEFINER=`root`@`localhost` PROCEDURE `REPORT_SLOW_QUERIES`()
+  COMMENT 'Lists top 50 long running queries. mysql> call REPORT_SLOW_QUERIES()'
 proc_label:BEGIN
 
 SELECT id,state,command,time,left(replace(info,'\n','<lf>'),120) as Query
@@ -313,6 +322,46 @@ FROM information_schema.processlist
 WHERE command <> 'Sleep'
 AND info NOT LIKE '%PROCESSLIST%'
 ORDER BY time DESC LIMIT 50;
+
+END$$
+DELIMITER ;
+-- END
+
+-- PROCEDURE TO REPORT CONNECTION SUMMARIES, LIKE PROCESS LIST BUT BETTER --
+DROP PROCEDURE IF EXISTS `dbatools`.`REPORT_CONNECTION_SUMMARY`;
+DELIMITER $$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `REPORT_CONNECTION_SUMMARY`()
+  COMMENT 'Improved version of "show processlist". mysql> call REPORT_CONNECTION_SUMMARY()'
+proc_label:BEGIN
+
+SELECT user AS username, SUBSTRING_INDEX(host, ':', 1) AS hostname, COUNT(id) AS connections
+  FROM information_schema.processlist
+  GROUP BY CONCAT(user,'@',(SUBSTRING_INDEX(host, ':', 1)))
+  ORDER BY connections DESC;
+
+END$$
+DELIMITER ;
+-- END
+
+-- PROCEDURE TO REPORT INNODB BUFFER POOL RECOMMENDED SIZE BASED ON GROWTH --
+DROP PROCEDURE IF EXISTS `dbatools`.`INNODB_BUFFER_POOL_RECOMMEND`;
+DELIMITER $$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `INNODB_BUFFER_POOL_RECOMMEND`()
+  COMMENT 'Calcs recommended innodb_buffer_pool_size. mysql> call INNODB_BUFFER_POOL_RECOMMEND()'
+proc_label:BEGIN
+
+SELECT CONCAT(CEILING(RIBPS/POWER(1024,pw)),SUBSTR(' KMGT',pw+1,1))
+  recommended_innodb_buffer_pool_size FROM
+    (
+      SELECT RIBPS,FLOOR(LOG(RIBPS)/LOG(1024)) pw
+      FROM
+        (
+          SELECT SUM(data_length+index_length)*1.1*growth RIBPS
+          FROM information_schema.tables AAA,
+          (SELECT 1.25 growth) BBB
+            WHERE ENGINE='InnoDB'
+          ) AA
+        ) A;
 
 END$$
 DELIMITER ;
