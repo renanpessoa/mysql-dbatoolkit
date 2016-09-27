@@ -19,7 +19,7 @@ INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.5','0a44a7a','2016-08-31 11:0
 INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.6','f6a38ea','2016-09-01 16:45:09',NULL);
 INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.7','4dbe296','2016-09-12 16:10:00',NULL);
 INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.8','efae195','2016-09-26 16:00:00',NULL);
-INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.9','efae195','2016-09-27 14:00:00',NULL);
+INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.9','8014e02','2016-09-27 14:00:00',NULL);
 -- END ------------------------------------------------------------------------------------------------------#
 
 -- Create InnoDB Lock Monitoring table --
