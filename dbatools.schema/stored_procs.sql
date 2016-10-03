@@ -9,25 +9,64 @@ CREATE TABLE `dbatools`.`revision` (
   `revision_num` CHAR(8) NOT NULL,
   `github_commit_hash` VARCHAR(255) NOT NULL,
   `created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Timestamp of initial creation.',
-  `modified` timestamp NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT 'Timestamp of modification.',
   PRIMARY KEY (revision_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 -- END
 
 -- INSERT REVISION HISTORY INTO revision TABLE --------------------------------------------------------------#
-INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.5','0a44a7a','2016-08-31 11:08:09',NULL);
-INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.6','f6a38ea','2016-09-01 16:45:09',NULL);
-INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.7','4dbe296','2016-09-12 16:10:00',NULL);
-INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.8','efae195','2016-09-26 16:00:00',NULL);
-INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.9','8014e02','2016-09-27 14:00:00',NULL);
+INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.5','0a44a7a','2016-08-31 11:08:09');
+INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.6','f6a38ea','2016-09-01 16:45:09');
+INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.7','4dbe296','2016-09-12 16:10:00');
+INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.8','efae195','2016-09-26 16:00:00');
+INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.9','8014e02','2016-09-27 14:00:00');
+INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.1.0','','2016-10-03 11:15:00');
 -- END ------------------------------------------------------------------------------------------------------#
 
 -- Create InnoDB Lock Monitoring table --
 --  Note: This logs a lot of extra lock information in the SHOW ENGINE INNODB STATUS output --
+DROP TABLE IF EXISTS dbatools.innodb_lock_monitor;
 CREATE TABLE `dbatools`.`innodb_lock_monitor` (
   `innodb_lock_monitor_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   PRIMARY KEY (innodb_lock_monitor_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+-- END
+
+-- Create Stats table for collecting trend data --
+--  Note: this will require the query below run as an event or cron job to populate data on schedule. --
+--  Note: we don't issue a drop table first, so that stats are not wiped out during a dbatools schema version upgrade. --
+CREATE TABLE `dbatools`.`stats_table_sizes` (
+`STATS_TABLE_SIZES_ID` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+`SERVER_HOSTNAME` varchar(64) NOT NULL DEFAULT '',
+`TABLE_SCHEMA` varchar(64) NOT NULL DEFAULT '',
+`TABLE_NAME` varchar(64) NOT NULL DEFAULT '',
+`ENGINE` varchar(64) DEFAULT NULL,
+`TABLE_ROWS` bigint(21) unsigned DEFAULT NULL,
+`DATA_LENGTH` bigint(21) unsigned DEFAULT NULL,
+`INDEX_LENGTH` bigint(21) unsigned DEFAULT NULL,
+`DATA_FREE` bigint(21) unsigned DEFAULT NULL,
+`AUTO_INCREMENT` bigint(21) unsigned DEFAULT NULL,
+`STATS_DATE` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Timestamp of data collection.',
+PRIMARY KEY (STATS_TABLE_SIZES_ID),
+UNIQUE KEY `ux_stats_date_table_schema_table_name` (STATS_DATE,TABLE_SCHEMA,TABLE_NAME),
+INDEX `ix_table_schema_table_name` (TABLE_SCHEMA,TABLE_NAME)
+) ENGINE=INNODB DEFAULT CHARSET=utf8;
+
+-- QUERY for the stats_table_sizes population
+INSERT INTO dbatools.stats_table_sizes
+  SELECT NULL,
+      @@hostname,
+      TABLE_SCHEMA,
+      TABLE_NAME,
+      ENGINE,
+      TABLE_ROWS,
+      DATA_LENGTH,
+      INDEX_LENGTH,
+      DATA_FREE,
+      AUTO_INCREMENT,
+      TIMESTAMP(NOW())
+      FROM INFORMATION_SCHEMA.TABLES
+        WHERE TABLE_TYPE = 'BASE TABLE'
+        AND TABLE_SCHEMA NOT IN ('information_schema','performance_schema');
 -- END
 
 -- PROCEDURE TO SHOW HELP FOR OUR PROCEDURES --
@@ -306,6 +345,26 @@ SELECT
 FROM information_schema.TABLES
 WHERE table_schema NOT IN ('information_schema','mysql','performance_schema')
 ORDER BY table_schema, (data_length + index_length) DESC;
+END$$
+DELIMITER ;
+-- END
+
+-- PROCEDURE TO REPORT TABLE SIZES. ORDERED BY SCHEMA, TABLE_NAME, DESCENDING --
+DROP PROCEDURE IF EXISTS `dbatools`.`REPORT_TABLE_SIZES_ALPHA`;
+DELIMITER $$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `REPORT_TABLE_SIZES_ALPHA`()
+  COMMENT 'Lists all tables on the server. Ordered by schema, table_name. mysql> call REPORT_TABLE_SIZES_ALPHA()'
+proc_label:BEGIN
+SELECT
+   table_schema as `schema`,
+   table_name AS `table`,
+   round((data_length / POW(1024,2)), 2) `data_size_mb`,
+   round((index_length / POW(1024,2)), 2) `index_size_mb`,
+   round(((data_length + index_length) / POW(1024,2)), 2) `total_size_mb`,
+   table_rows AS `rows`
+FROM information_schema.TABLES
+WHERE table_schema NOT IN ('information_schema','mysql','performance_schema')
+ORDER BY table_schema, table_name ASC;
 END$$
 DELIMITER ;
 -- END

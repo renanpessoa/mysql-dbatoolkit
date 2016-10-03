@@ -1,3 +1,6 @@
+## 0.1.0
+- adding stats_table_sizes to support trending of tables.
+
 ## 0.0.9
 - renamed procedure calls to routine, added some reports.
 
