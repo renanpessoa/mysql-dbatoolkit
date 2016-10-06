@@ -19,22 +19,58 @@ INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.6','f6a38ea','2016-09-01 16:4
 INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.7','4dbe296','2016-09-12 16:10:00');
 INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.8','efae195','2016-09-26 16:00:00');
 INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.9','8014e02','2016-09-27 14:00:00');
-INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.1.0','','2016-10-03 11:15:00');
+INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.1.0','bae02eb','2016-10-03 11:15:00');
 -- END ------------------------------------------------------------------------------------------------------#
+
+-- LOG TABLE
+DROP TABLE IF EXISTS `log`;
+CREATE TABLE `log` (
+  `a` varchar(50) CHARACTER SET utf8 DEFAULT NULL,
+  `b` varchar(50) CHARACTER SET utf8 DEFAULT NULL,
+  `c` varchar(50) CHARACTER SET utf8 DEFAULT NULL,
+  `d` varchar(50) CHARACTER SET utf8 DEFAULT NULL,
+  `e` varchar(50) CHARACTER SET utf8 DEFAULT NULL,
+  `f` varchar(50) CHARACTER SET utf8 DEFAULT NULL,
+  `g` varchar(50) CHARACTER SET utf8 DEFAULT NULL,
+  `h` varchar(50) CHARACTER SET utf8 DEFAULT NULL,
+  `i` varchar(50) CHARACTER SET utf8 DEFAULT NULL,
+  `j` varchar(50) CHARACTER SET utf8 DEFAULT NULL,
+  `k` varchar(50) CHARACTER SET utf8 DEFAULT NULL,
+  `l` varchar(50) CHARACTER SET utf8 DEFAULT NULL,
+  `m` varchar(50) CHARACTER SET utf8 DEFAULT NULL,
+  `n` varchar(50) CHARACTER SET utf8 DEFAULT NULL,
+  `o` varchar(50) CHARACTER SET utf8 DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- Create InnoDB Lock Monitoring table --
 --  Note: This logs a lot of extra lock information in the SHOW ENGINE INNODB STATUS output --
-DROP TABLE IF EXISTS dbatools.innodb_lock_monitor;
-CREATE TABLE `dbatools`.`innodb_lock_monitor` (
-  `innodb_lock_monitor_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-  PRIMARY KEY (innodb_lock_monitor_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+-- DROP TABLE IF EXISTS dbatools.innodb_lock_monitor;
+-- CREATE TABLE `dbatools`.`innodb_lock_monitor` (
+-- `innodb_lock_monitor_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+-- PRIMARY KEY (innodb_lock_monitor_id)
+-- ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 -- END
+
+-- Create deltas table for tracking table size/row changes over time.
+DROP TABLE IF EXISTS `stats_table_deltas`;
+CREATE TABLE `stats_table_deltas` (
+  `STATS_TABLE_DELTAS_ID` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `SERVER_HOSTNAME` varchar(64) NOT NULL DEFAULT '',
+  `TABLE_SCHEMA` varchar(64) NOT NULL DEFAULT '',
+  `TABLE_NAME` varchar(64) NOT NULL DEFAULT '',
+  `ROWS_DELTA` bigint(21) signed DEFAULT NULL,
+  `DATA_DELTA` bigint(21) signed DEFAULT NULL,
+  `INDEX_DELTA` bigint(21) signed DEFAULT NULL,
+  `STATS_DATE` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Timestamp of data collection.',
+  PRIMARY KEY (`STATS_TABLE_DELTAS_ID`),
+  UNIQUE KEY `ux_stats_date_table_schema_table_name` (`STATS_DATE`,`TABLE_SCHEMA`,`TABLE_NAME`),
+  KEY `ix_table_schema_table_name` (`TABLE_SCHEMA`,`TABLE_NAME`)
+) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
 
 -- Create Stats table for collecting trend data --
 --  Note: this will require the query below run as an event or cron job to populate data on schedule. --
 --  Note: we don't issue a drop table first, so that stats are not wiped out during a dbatools schema version upgrade. --
-CREATE TABLE `dbatools`.`stats_table_sizes` (
+CREATE TABLE `stats_table_sizes` (
 `STATS_TABLE_SIZES_ID` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 `SERVER_HOSTNAME` varchar(64) NOT NULL DEFAULT '',
 `TABLE_SCHEMA` varchar(64) NOT NULL DEFAULT '',
@@ -52,21 +88,29 @@ INDEX `ix_table_schema_table_name` (TABLE_SCHEMA,TABLE_NAME)
 ) ENGINE=INNODB DEFAULT CHARSET=utf8;
 
 -- QUERY for the stats_table_sizes population
-INSERT INTO dbatools.stats_table_sizes
-  SELECT NULL,
-      @@hostname,
-      TABLE_SCHEMA,
-      TABLE_NAME,
-      ENGINE,
-      TABLE_ROWS,
-      DATA_LENGTH,
-      INDEX_LENGTH,
-      DATA_FREE,
-      AUTO_INCREMENT,
-      TIMESTAMP(NOW())
-      FROM INFORMATION_SCHEMA.TABLES
-        WHERE TABLE_TYPE = 'BASE TABLE'
-        AND TABLE_SCHEMA NOT IN ('information_schema','performance_schema');
+SET GLOBAL event_scheduler = ON;
+CREATE EVENT IF NOT EXISTS `dbatools`.`ev_hourly_stats_table_sizes`
+    ON SCHEDULE
+      EVERY 1 HOUR
+    COMMENT 'Populates the stats_table_sizes table to track growth.'
+    DO
+      INSERT INTO dbatools.stats_table_sizes
+        SELECT NULL,
+            @@hostname,
+            TABLE_SCHEMA,
+            TABLE_NAME,
+            ENGINE,
+            TABLE_ROWS,
+            DATA_LENGTH,
+            INDEX_LENGTH,
+            DATA_FREE,
+            AUTO_INCREMENT,
+            TIMESTAMP(NOW())
+            FROM INFORMATION_SCHEMA.TABLES
+              WHERE TABLE_TYPE = 'BASE TABLE'
+              AND TABLE_SCHEMA NOT IN ('information_schema','performance_schema');
+END $$
+DELIMITER $$
 -- END
 
 -- PROCEDURE TO SHOW HELP FOR OUR PROCEDURES --
