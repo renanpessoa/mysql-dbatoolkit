@@ -603,12 +603,12 @@ OPEN cur_iterable;
     INTO v_SERVER_HOSTNAME, v_TABLE_SCHEMA, v_TABLE_NAME;
 
     -- LOGGING, OPTIONAL
-    INSERT INTO log VALUES ( v_itertable,
-      v_SERVER_HOSTNAME, v_TABLE_SCHEMA, v_TABLE_NAME,
-      v_later_TABLE_ROWS, v_former_TABLE_ROWS, v_delta_TABLE_ROWS,
-      v_later_DATA_LENGTH, v_former_DATA_LENGTH, v_delta_DATA_LENGTH,
-      v_later_INDEX_LENGTH, v_former_INDEX_LENGTH, v_delta_INDEX_LENGTH,
-      NULL, NULL);
+    -- INSERT INTO log VALUES ( v_itertable,
+    --  v_SERVER_HOSTNAME, v_TABLE_SCHEMA, v_TABLE_NAME,
+    --  v_later_TABLE_ROWS, v_former_TABLE_ROWS, v_delta_TABLE_ROWS,
+    --  v_later_DATA_LENGTH, v_former_DATA_LENGTH, v_delta_DATA_LENGTH,
+    --  v_later_INDEX_LENGTH, v_former_INDEX_LENGTH, v_delta_INDEX_LENGTH,
+    --  NULL, NULL);
 
     -- INSERT TO DELTA TABLE
     INSERT INTO stats_table_deltas (STATS_TABLE_DELTAS_ID,

@@ -1,3 +1,6 @@
+## 0.1.2
+- removing logging from ANALYZE_TABLE_DELTAS
+
 ## 0.1.1
 - not a release... working on table growth delta SPs and schema
 
