@@ -142,6 +142,63 @@ LOCK TABLES `stats_table_sizes` WRITE;
 UNLOCK TABLES;
 
 --
+-- Dumping events for database 'dbatools'
+--
+/*!50106 SET @save_time_zone= @@TIME_ZONE */ ;
+/*!50106 DROP EVENT IF EXISTS `ev_hourly_analyze_table_deltas` */;
+DELIMITER ;;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;;
+/*!50003 SET character_set_client  = utf8 */ ;;
+/*!50003 SET character_set_results = utf8 */ ;;
+/*!50003 SET collation_connection  = utf8_general_ci */ ;;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;;
+/*!50003 SET sql_mode              = 'NO_ENGINE_SUBSTITUTION' */ ;;
+/*!50003 SET @saved_time_zone      = @@time_zone */ ;;
+/*!50003 SET time_zone             = 'SYSTEM' */ ;;
+/*!50106 CREATE*/ /*!50117 DEFINER=`root`@`localhost`*/ /*!50106 EVENT `ev_hourly_analyze_table_deltas` ON SCHEDULE EVERY 1 HOUR STARTS '2016-10-07 13:17:39' ON COMPLETION NOT PRESERVE ENABLE COMMENT 'Executes ANALYZE_TABLE_DELTAS() to populates the stats_table_del' DO CALL ANALYZE_TABLE_DELTAS() */ ;;
+/*!50003 SET time_zone             = @saved_time_zone */ ;;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;;
+/*!50003 SET character_set_results = @saved_cs_results */ ;;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;;
+/*!50106 DROP EVENT IF EXISTS `ev_hourly_stats_table_sizes` */;;
+DELIMITER ;;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;;
+/*!50003 SET character_set_client  = utf8 */ ;;
+/*!50003 SET character_set_results = utf8 */ ;;
+/*!50003 SET collation_connection  = utf8_general_ci */ ;;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;;
+/*!50003 SET sql_mode              = 'NO_ENGINE_SUBSTITUTION' */ ;;
+/*!50003 SET @saved_time_zone      = @@time_zone */ ;;
+/*!50003 SET time_zone             = 'SYSTEM' */ ;;
+/*!50106 CREATE*/ /*!50117 DEFINER=`root`@`localhost`*/ /*!50106 EVENT `ev_hourly_stats_table_sizes` ON SCHEDULE EVERY 1 HOUR STARTS '2016-10-07 13:17:39' ON COMPLETION NOT PRESERVE ENABLE COMMENT 'Populates the stats_table_sizes table to track growth.' DO INSERT INTO stats_table_sizes
+        SELECT NULL,
+            @@hostname,
+            TABLE_SCHEMA,
+            TABLE_NAME,
+            ENGINE,
+            TABLE_ROWS,
+            DATA_LENGTH,
+            INDEX_LENGTH,
+            DATA_FREE,
+            AUTO_INCREMENT,
+            TIMESTAMP(NOW())
+            FROM INFORMATION_SCHEMA.TABLES
+              WHERE TABLE_TYPE = 'BASE TABLE'
+              AND TABLE_SCHEMA NOT IN ('information_schema','performance_schema') */ ;;
+/*!50003 SET time_zone             = @saved_time_zone */ ;;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;;
+/*!50003 SET character_set_results = @saved_cs_results */ ;;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;;
+DELIMITER ;
+/*!50106 SET TIME_ZONE= @save_time_zone */ ;
+
+--
 -- Dumping routines for database 'dbatools'
 --
 /*!50003 DROP PROCEDURE IF EXISTS `ANALYZE_TABLE_DELTAS` */;
@@ -821,4 +878,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2016-10-07 13:21:13
+-- Dump completed on 2016-10-07 13:26:32
