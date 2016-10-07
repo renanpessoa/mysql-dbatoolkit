@@ -23,7 +23,7 @@ INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.7','4dbe296','2016-09-12 16:1
 INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.8','efae195','2016-09-26 16:00:00');
 INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.9','8014e02','2016-09-27 14:00:00');
 INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.1.0','bae02eb','2016-10-03 11:15:00');
-INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.1.1','','2016-10-07 11:02:00');
+INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.1.1','fd2ed71','2016-10-07 11:02:00');
 -- END ------------------------------------------------------------------------------------------------------#
 
 -- LOG TABLE
