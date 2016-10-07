@@ -2,6 +2,9 @@ DROP DATABASE IF EXISTS dbatools;
 CREATE DATABASE `dbatools` /*!40100 DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci */;
 USE dbatools;
 
+-- EVENTS: this must be enabled for functionality of reports
+SET GLOBAL event_scheduler = ON;
+
 -- Create the revision table --
 DROP TABLE IF EXISTS dbatools.revision;
 CREATE TABLE `dbatools`.`revision` (
@@ -20,6 +23,7 @@ INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.7','4dbe296','2016-09-12 16:1
 INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.8','efae195','2016-09-26 16:00:00');
 INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.0.9','8014e02','2016-09-27 14:00:00');
 INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.1.0','bae02eb','2016-10-03 11:15:00');
+INSERT INTO `dbatools`.`revision` VALUES(NULL,'0.1.1','','2016-10-07 11:02:00');
 -- END ------------------------------------------------------------------------------------------------------#
 
 -- LOG TABLE
@@ -52,7 +56,10 @@ CREATE TABLE `log` (
 -- END
 
 -- Create deltas table for tracking table size/row changes over time.
-DROP TABLE IF EXISTS `stats_table_deltas`;
+--  Note: this table receives inserts from PROC ANALYZE_TABLE_DELTAS()
+--  Note: to utilize this, ensure the event scheduler item is enabled.
+--  Note: we don't issue a drop table first, so that deltas are not wiped out during a dbatools schema version upgrade. --
+-- DROP TABLE IF EXISTS `stats_table_deltas`;
 CREATE TABLE `stats_table_deltas` (
   `STATS_TABLE_DELTAS_ID` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `SERVER_HOSTNAME` varchar(64) NOT NULL DEFAULT '',
@@ -70,6 +77,7 @@ CREATE TABLE `stats_table_deltas` (
 -- Create Stats table for collecting trend data --
 --  Note: this will require the query below run as an event or cron job to populate data on schedule. --
 --  Note: we don't issue a drop table first, so that stats are not wiped out during a dbatools schema version upgrade. --
+-- DROP TABLE IF EXISTS `stats_table_deltas`;
 CREATE TABLE `stats_table_sizes` (
 `STATS_TABLE_SIZES_ID` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 `SERVER_HOSTNAME` varchar(64) NOT NULL DEFAULT '',
@@ -87,14 +95,14 @@ UNIQUE KEY `ux_stats_date_table_schema_table_name` (STATS_DATE,TABLE_SCHEMA,TABL
 INDEX `ix_table_schema_table_name` (TABLE_SCHEMA,TABLE_NAME)
 ) ENGINE=INNODB DEFAULT CHARSET=utf8;
 
--- QUERY for the stats_table_sizes population
-SET GLOBAL event_scheduler = ON;
+-- EVENT to generate hourly collection of stats_table_sizes
+DROP EVENT IF EXISTS `dbatools`.`ev_hourly_stats_table_sizes`;
 CREATE EVENT IF NOT EXISTS `dbatools`.`ev_hourly_stats_table_sizes`
     ON SCHEDULE
       EVERY 1 HOUR
     COMMENT 'Populates the stats_table_sizes table to track growth.'
     DO
-      INSERT INTO dbatools.stats_table_sizes
+      INSERT INTO stats_table_sizes
         SELECT NULL,
             @@hostname,
             TABLE_SCHEMA,
@@ -109,8 +117,16 @@ CREATE EVENT IF NOT EXISTS `dbatools`.`ev_hourly_stats_table_sizes`
             FROM INFORMATION_SCHEMA.TABLES
               WHERE TABLE_TYPE = 'BASE TABLE'
               AND TABLE_SCHEMA NOT IN ('information_schema','performance_schema');
-END $$
-DELIMITER $$
+-- END
+
+-- EVENT to generate daily computation of table growth delta stats
+DROP EVENT IF EXISTS `dbatools`.`ev_hourly_analyze_table_deltas`;
+CREATE EVENT IF NOT EXISTS `dbatools`.`ev_hourly_analyze_table_deltas`
+    ON SCHEDULE
+      EVERY 1 HOUR
+    COMMENT 'Executes ANALYZE_TABLE_DELTAS() to populates the stats_table_deltas table.'
+    DO
+      CALL ANALYZE_TABLE_DELTAS();
 -- END
 
 -- PROCEDURE TO SHOW HELP FOR OUR PROCEDURES --
@@ -465,6 +481,155 @@ SELECT CONCAT(CEILING(RIBPS/POWER(1024,pw)),SUBSTR(' KMGT',pw+1,1))
             WHERE ENGINE='InnoDB'
           ) AA
         ) A;
+
+END$$
+DELIMITER ;
+-- END
+
+-- PROCEDURE TO GENERATE TABLE STATISTICS FOR ROWS, DATA, INDEX GROWTH
+DROP PROCEDURE IF EXISTS `ANALYZE_TABLE_DELTAS`;
+DELIMITER $$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `ANALYZE_TABLE_DELTAS`()
+  COMMENT 'Generate table growth stats. [inserts into stats_table_deltas] mysql> call ANALYZE_TABLE_DELTAS()'
+
+proc_label:BEGIN
+
+-- VARIABLES... yep.
+DECLARE v_SERVER_HOSTNAME VARCHAR(255);
+DECLARE v_TABLE_SCHEMA VARCHAR(255);
+DECLARE v_TABLE_NAME VARCHAR(255);
+DECLARE v_itertable VARCHAR(255);
+DECLARE v_finished INTEGER DEFAULT 0;
+
+DECLARE v_later_TABLE_ROWS BIGINT(21) unsigned;
+DECLARE v_later_DATA_LENGTH BIGINT(21) unsigned;
+DECLARE v_later_INDEX_LENGTH BIGINT(21) unsigned;
+DECLARE v_later_STATS_DATE TIMESTAMP;
+
+DECLARE v_former_TABLE_ROWS BIGINT(21) unsigned;
+DECLARE v_former_DATA_LENGTH BIGINT(21) unsigned;
+DECLARE v_former_INDEX_LENGTH BIGINT(21) unsigned;
+
+DECLARE v_delta_TABLE_ROWS BIGINT(21) signed;
+DECLARE v_delta_DATA_LENGTH BIGINT(21) signed;
+DECLARE v_delta_INDEX_LENGTH BIGINT(21) signed;
+
+-- CURSOR: populate the list of distinct table names for our loop
+DECLARE cur_iterable CURSOR FOR
+  SELECT
+      DISTINCT(CONCAT(SERVER_HOSTNAME,':',TABLE_SCHEMA,':',TABLE_NAME)) as itertable
+  FROM stats_table_sizes
+  WHERE SERVER_HOSTNAME = @@hostname
+  ORDER BY itertable;
+
+-- HANDLER: ends the loop
+DECLARE CONTINUE HANDLER FOR NOT FOUND SET v_finished = 1;
+
+-- START CURSOR
+OPEN cur_iterable;
+  get_data: LOOP
+    -- Populate list of tables to iterate
+    FETCH cur_iterable INTO v_itertable;
+
+    -- Nothing left, exit loop.
+    IF v_finished = 1 THEN
+      LEAVE get_data;
+    END IF;
+
+    -- DELTA CALC for DATA_LENGTH
+    SELECT
+    -- ROWS 0day
+    (SELECT ((TABLE_ROWS / 1024) / 1024) AS curr_size FROM stats_table_sizes
+    WHERE CONCAT(SERVER_HOSTNAME,':',TABLE_SCHEMA,':',TABLE_NAME) = v_itertable
+    AND CURDATE() <= STATS_DATE
+    ORDER BY STATS_DATE ASC LIMIT 1)
+    AS ROWS_0DAY,
+    -- ROWS 1day
+    (SELECT ((TABLE_ROWS / 1024) / 1024) AS curr_size FROM stats_table_sizes
+    WHERE CONCAT(SERVER_HOSTNAME,':',TABLE_SCHEMA,':',TABLE_NAME) = v_itertable
+    AND DATE_SUB(CURDATE(),INTERVAL 1 DAY) <= STATS_DATE
+    ORDER BY STATS_DATE ASC LIMIT 1)
+    AS ROWS_1DAY,
+    -- ROWS difference
+    ((SELECT ((TABLE_ROWS / 1024) / 1024) AS curr_size FROM stats_table_sizes
+    WHERE CONCAT(SERVER_HOSTNAME,':',TABLE_SCHEMA,':',TABLE_NAME) = v_itertable AND CURDATE() <= STATS_DATE ORDER by STATS_DATE ASC LIMIT 1) -
+    (SELECT ((TABLE_ROWS / 1024) / 1024) AS curr_size FROM stats_table_sizes
+    WHERE CONCAT(SERVER_HOSTNAME,':',TABLE_SCHEMA,':',TABLE_NAME) = v_itertable AND DATE_SUB(CURDATE(),INTERVAL 1 DAY) <= STATS_DATE ORDER BY STATS_DATE ASC LIMIT 1)) AS ROWS_DELTA,
+    -- DATA 0day
+    (SELECT ((DATA_LENGTH / 1024) / 1024) AS curr_size FROM stats_table_sizes
+    WHERE CONCAT(SERVER_HOSTNAME,':',TABLE_SCHEMA,':',TABLE_NAME) = v_itertable
+    AND CURDATE() <= STATS_DATE
+    ORDER BY STATS_DATE ASC LIMIT 1)
+    AS DATA_0DAY,
+    -- DATA 1day
+    (SELECT ((DATA_LENGTH / 1024) / 1024) AS curr_size FROM stats_table_sizes
+    WHERE CONCAT(SERVER_HOSTNAME,':',TABLE_SCHEMA,':',TABLE_NAME) = v_itertable
+    AND DATE_SUB(CURDATE(),INTERVAL 1 DAY) <= STATS_DATE
+    ORDER BY STATS_DATE ASC LIMIT 1)
+    AS DATA_1DAY,
+    -- DATA difference
+    ((SELECT ((DATA_LENGTH / 1024) / 1024) AS curr_size FROM stats_table_sizes
+    WHERE CONCAT(SERVER_HOSTNAME,':',TABLE_SCHEMA,':',TABLE_NAME) = v_itertable AND CURDATE() <= STATS_DATE ORDER by STATS_DATE ASC LIMIT 1) -
+    (SELECT ((DATA_LENGTH / 1024) / 1024) AS curr_size FROM stats_table_sizes
+    WHERE CONCAT(SERVER_HOSTNAME,':',TABLE_SCHEMA,':',TABLE_NAME) = v_itertable AND DATE_SUB(CURDATE(),INTERVAL 1 DAY) <= STATS_DATE ORDER BY STATS_DATE ASC LIMIT 1)) AS DATA_DELTA,
+    -- INDEX 0day
+    (SELECT ((INDEX_LENGTH / 1024) / 1024) AS curr_size FROM stats_table_sizes
+    WHERE CONCAT(SERVER_HOSTNAME,':',TABLE_SCHEMA,':',TABLE_NAME) = v_itertable
+    AND CURDATE() <= STATS_DATE
+    ORDER BY STATS_DATE ASC LIMIT 1)
+    AS INDEX_0DAY,
+    -- INDEX 1 day
+    (SELECT ((INDEX_LENGTH / 1024) / 1024) AS curr_size FROM stats_table_sizes
+    WHERE CONCAT(SERVER_HOSTNAME,':',TABLE_SCHEMA,':',TABLE_NAME) = v_itertable
+    AND DATE_SUB(CURDATE(),INTERVAL 1 DAY) <= STATS_DATE
+    ORDER BY STATS_DATE ASC LIMIT 1)
+    AS INDEX_1DAY,
+    -- INDEX difference
+    ((SELECT ((INDEX_LENGTH / 1024) / 1024) AS curr_size FROM stats_table_sizes
+    WHERE CONCAT(SERVER_HOSTNAME,':',TABLE_SCHEMA,':',TABLE_NAME) = v_itertable AND CURDATE() <= STATS_DATE ORDER by STATS_DATE ASC LIMIT 1) -
+    (SELECT ((INDEX_LENGTH / 1024) / 1024) AS curr_size FROM stats_table_sizes
+    WHERE CONCAT(SERVER_HOSTNAME,':',TABLE_SCHEMA,':',TABLE_NAME) = v_itertable AND DATE_SUB(CURDATE(),INTERVAL 1 DAY) <= STATS_DATE ORDER BY STATS_DATE ASC LIMIT 1)) AS INDEX_DELTA
+    -- POPULATE VARIABLES
+    INTO
+    v_later_TABLE_ROWS, v_former_TABLE_ROWS, v_delta_TABLE_ROWS,
+    v_later_DATA_LENGTH, v_former_DATA_LENGTH, v_delta_DATA_LENGTH,
+    v_later_INDEX_LENGTH, v_former_INDEX_LENGTH, v_delta_INDEX_LENGTH;
+
+    -- STRING MANIPULATION TO GET VARS FOR INSERT
+    SELECT
+      SUBSTRING_INDEX(v_itertable, ':', 1) AS SERVER_HOST,
+      SUBSTRING_INDEX(SUBSTRING_INDEX(v_itertable, ':', 2),':',-1) AS SCHEMA_NAME,
+      SUBSTRING_INDEX(SUBSTRING_INDEX(v_itertable, ':', -2),':',-1) AS TABLE_NAME
+    INTO v_SERVER_HOSTNAME, v_TABLE_SCHEMA, v_TABLE_NAME;
+
+    -- LOGGING, OPTIONAL
+    INSERT INTO log VALUES ( v_itertable,
+      v_SERVER_HOSTNAME, v_TABLE_SCHEMA, v_TABLE_NAME,
+      v_later_TABLE_ROWS, v_former_TABLE_ROWS, v_delta_TABLE_ROWS,
+      v_later_DATA_LENGTH, v_former_DATA_LENGTH, v_delta_DATA_LENGTH,
+      v_later_INDEX_LENGTH, v_former_INDEX_LENGTH, v_delta_INDEX_LENGTH,
+      NULL, NULL);
+
+    -- INSERT TO DELTA TABLE
+    INSERT INTO stats_table_deltas (STATS_TABLE_DELTAS_ID,
+        SERVER_HOSTNAME,
+        TABLE_SCHEMA,
+        TABLE_NAME,
+        ROWS_DELTA,
+        DATA_DELTA,
+        INDEX_DELTA,
+        STATS_DATE)
+      VALUES (NULL,
+        v_SERVER_HOSTNAME,
+        v_TABLE_SCHEMA,
+        v_TABLE_NAME,
+        v_delta_TABLE_ROWS,
+        v_delta_DATA_LENGTH,
+        v_delta_INDEX_LENGTH,
+        NOW());
+
+  END LOOP get_data;
+CLOSE cur_iterable;
 
 END$$
 DELIMITER ;
