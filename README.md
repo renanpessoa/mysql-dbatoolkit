@@ -1,12 +1,13 @@
 # Madeline's MySQL DBA Toolkit
-Tools, scripts, and standardized configuration files for MySQL. Things I've written to enable me to be lazier, or more productive... not sure which. 
+Tools, scripts, and standardized configuration files for MySQL. Things I've written to enable me to be lazier, or more productive... not sure which... sometimes both. Efficient, that's the term.
 
 ## Installation
+```
 mysql> create database dbatools;
 linux/osx/bsd> mysql dbatools < dbatools.schema/stored_procs.sql
 mysql> use dbatools;
-mysql> show procedure status;
-mysql> "call some of the procedures... most are self explanatory by name"
+mysql> call HELP();
+```
 
 ## Standardized my.cnf files for mysqld
 - These are ordered by RAM sizes. 
@@ -15,7 +16,7 @@ mysql> "call some of the procedures... most are self explanatory by name"
 - Various files that have different purposes. 
 
 ## Current procedure list
-
+```
 | AUTH_USER_PASS_UPDATE        | Update password for a user.
 | AUTH_USER_SEARCH             | Lists permissions for a given username.
 | HELP                         | Show the help menu for dbatools schema.
@@ -31,3 +32,4 @@ mysql> "call some of the procedures... most are self explanatory by name"
 | TRIGGER_LIST_ALL             | Lists all triggers on the server.
 | TRIGGER_LIST_SCHEMA          | Lists all triggers in a schema.
 | TRIGGER_SEARCH               | Searches for a trigger by name.
+```
